@@ -85,7 +85,10 @@ async def on_message(message):
                 cur.execute("SELECT * FROM wordcount WHERE LOWER(TEXT)=? AND ANYWHERE='true'", (str(temprow).lower(),))
                 rows = cur.fetchall()
                 if rows:
-                    cur.execute("UPDATE wordcount SET COUNT = COUNT + 1 WHERE LOWER(TEXT)=?", (str(temprow).lower(),))
+                    tempcount = tempstring.lower().count(str(temprow).lower())
+                    tempcommand = "UPDATE wordcount SET COUNT = COUNT + " + str(tempcount) + " WHERE LOWER(TEXT)=\"" + str(temprow).lower() + "\""
+                    print(tempcommand)
+                    cur.execute(tempcommand)
                     dbconn.commit()
                     cur.execute("SELECT COUNT FROM wordcount WHERE LOWER(TEXT)=?", (str(temprow).lower(),))
                     rows = cur.fetchall()
