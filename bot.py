@@ -161,6 +161,13 @@ async def listcounter(ctx):
     print(text)
     await ctx.send(text)
 
+def filterNumbers(string):
+    tempstring = ""
+    for char in string:
+        if char.isdigit():
+            tempstring = tempstring + char
+    return tempstring
+
 @bot.command()
 @commands.is_owner()
 async def setcounter(ctx, letext, amount):
@@ -168,13 +175,15 @@ async def setcounter(ctx, letext, amount):
         await ctx.send("There are parameters missing. Usage: ?setcounter \"[text]\" [amount]")
     else:
         cur = dbconn.cursor()
-        cur.execute("SELECT * FROM wordcount WHERE LOWER(TEXT)=?", (letext,))
+        cur.execute("SELECT * FROM wordcount WHERE LOWER(TEXT)=?", (letext.lower(),))
         rows = cur.fetchall()
         if rows:
+            print(str(rows))
             amount = filterNumbers(amount)
             if hasNumbers(amount):
-                cur.execute("UPDATE wordcount SET COUNT=? WHERE LOWER(TEXT)=?", (amount, letext,))
+                cur.execute("UPDATE wordcount SET COUNT=? WHERE LOWER(TEXT)=?", (amount, letext.lower(),))
                 dbconn.commit()
+                print("commit")
                 await ctx.send("The count for " + letext + " has been set to " + amount)
             else:
                 await ctx.send("Please enter a number as the second parameter")
