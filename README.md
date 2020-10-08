@@ -1,7 +1,16 @@
-# ChinoBot v1.1 by Davidlinye
+# ChinoBot v1.2 by Davidlinye
 #
 # New features:
-# -Users can now add a counter for any phrase with the command ?addcounter "your text here" (not case sensitive, but it saves the given text raw)
-# -Users can now delete any existing counter with ?delcounter "your text here" (not case sensitive)
-# -The owner can set the value of any counter to any number. This is in case a counter got removed by accident
-# -New prefix: ? instead of $ for easier typing
+# -User can do ?anywhere "your text here" to toggle the anywhere in message count function. Standard disabled when creating a counter.
+#
+# How to use:
+# 1. Download the bot to any directory
+# 2. Within that directory, create a file named .env
+# 3. Add the following lines to the .env file (without the {}):
+#
+#DISCORD_TOKEN={bot token}
+#DISCORD_SERVER={server name}
+#DISCORD_OWNER={your discord ID}
+#
+# 4. Run the bot with python3
+

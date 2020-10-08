@@ -16,7 +16,9 @@ OWNER = os.getenv('DISCORD_OWNER')
 
 client = discord.Client()
 
-bot = commands.Bot(command_prefix='?', owner_id=int(OWNER))
+commandprefix = '?'
+
+bot = commands.Bot(command_prefix=commandprefix, owner_id=int(OWNER))
 
 dbfilelocation = "./wordcount.db"
 
@@ -24,7 +26,7 @@ def create_connection(dbfilename):
     conn = None
     try:
         conn = sqlite3.connect(dbfilename)
-        print(sqlite3.version)
+        #print(sqlite3.version)
     except Error as e:
         print(e)
     return conn
@@ -34,65 +36,66 @@ dbconn = create_connection(dbfilelocation)
 @bot.event
 async def on_ready():
     guild = discord.utils.get(client.guilds, name=GUILD)
-    print("on_ready")
+    #print("on_ready")
     #print(
     #    f'{client.user} is connected to the following guild:\n'
     #    f'{guild.name}(id: {guild.id})'
     #)
     cur = dbconn.cursor()
     createtable = \
-    "CREATE TABLE wordcount (id integer PRIMARY KEY, TEXT text DEFAULT NULL, COUNT integer DEFAULT 0)"
+    "CREATE TABLE wordcount (id integer PRIMARY KEY, TEXT text DEFAULT NULL, COUNT integer DEFAULT 0, ANYWHERE boolean DEFAULT 0)"
     try:
         cur.execute(createtable)
     except Error as e:
-        print(e)
+        print("Database exists")
+    print("Chino bot v1.2")
 
 def hasNumbers(inputString):
     return any(char.isdigit() for char in inputString)
 
-def addCountercheck(filename):
-    filetest = open(filename,'a+')
-    filetest.close()
-    with open(filename, 'r+') as lines:
-        countstring = lines.read()
-        filter(lambda x: x.isdigit(), countstring)
-        if not hasNumbers(countstring):
-            countstring = "0"
-        count = int(countstring, base=10)
-        count = count + 1
-    with open(filename, 'w') as lines:
-        countstring = str(count)
-        lines.write(countstring)
-
-def filterNumbers(string):
-    tempstring = ""
-    for char in string:
-        if char.isdigit():
-            tempstring = tempstring + char
-    return tempstring
-
 @bot.event
 async def on_message(message):
-    response = message.content.lower() + ' count: '
     cur = None
     print("on_message respond code")
-    if message.author == client.user:
+    print("client:" + str(client.user))
+    if message.author == bot.user:
         return
     cur = dbconn.cursor()
     tempstring = message.content.lower()
     cur.execute("SELECT * FROM wordcount WHERE LOWER(TEXT)=?", (tempstring,))
     rows = cur.fetchall()
-    print(rows)
     if rows:
-        print("in rows")
         cur.execute("UPDATE wordcount SET COUNT = COUNT + 1 WHERE LOWER(TEXT)=?", (tempstring,))
         dbconn.commit()
         cur.execute("SELECT COUNT FROM wordcount WHERE LOWER(TEXT)=?", (tempstring,))
         rows = cur.fetchall()
-        temprows = str(rows[0])
-        temprows = filterNumbers(temprows)
-        response = response + temprows
+        temprows = str(rows[0])[1:-2]
+        print(temprows)
+        cur.execute("SELECT TEXT FROM wordcount WHERE LOWER(TEXT)=?", (tempstring,))
+        rows = cur.fetchall()
+        temprows2 = str(rows[0])[2:-3]
+        response = temprows2 + ' count: ' + temprows
         await message.channel.send(response)
+    elif not tempstring.startswith(commandprefix):
+        cur.execute("SELECT LOWER(TEXT) FROM wordcount")
+        rows = cur.fetchall()
+        for row in rows:
+            temprow = str(row)[2:-3]
+            if str(temprow).lower() in tempstring.lower():
+                cur.execute("SELECT * FROM wordcount WHERE LOWER(TEXT)=? AND ANYWHERE='true'", (str(temprow).lower(),))
+                rows = cur.fetchall()
+                if rows:
+                    cur.execute("UPDATE wordcount SET COUNT = COUNT + 1 WHERE LOWER(TEXT)=?", (str(temprow).lower(),))
+                    dbconn.commit()
+                    cur.execute("SELECT COUNT FROM wordcount WHERE LOWER(TEXT)=?", (str(temprow).lower(),))
+                    rows = cur.fetchall()
+                    temprows = str(rows[0])[1:-2]
+                    print(temprows)
+                    cur.execute("SELECT TEXT FROM wordcount WHERE LOWER(TEXT)=?", (str(temprow).lower(),))
+                    rows = cur.fetchall()
+                    temprows2 = str(rows[0])[2:-3]
+                    response = temprows2 + ' count: ' + temprows
+                    await message.channel.send(response)
     await bot.process_commands(message)
 
 @bot.command()
@@ -126,6 +129,37 @@ async def delcounter(ctx, letext):
         tempstring = letext + " does not exists"
     print(tempstring)
     await ctx.send(tempstring)
+
+@bot.command()
+async def anywhere(ctx, letext):
+    tempstring = ""
+    cur = dbconn.cursor()
+    cur.execute("SELECT ANYWHERE FROM wordcount WHERE LOWER(TEXT)=?", (letext.lower(),))
+    rows = cur.fetchall()
+    if rows:
+        if 'true' in str(rows[0]):
+            cur.execute("UPDATE wordcount SET ANYWHERE = 'false' WHERE LOWER(TEXT)=(?)", (letext.lower(),))
+            tempstring = "Anywhere disabled for " + letext
+        else:
+            cur.execute("UPDATE wordcount SET ANYWHERE = 'true' WHERE LOWER(TEXT)=(?)", (letext.lower(),))
+            tempstring = "Anywhere enabled for " + letext
+        dbconn.commit()
+    else:
+        tempstring = letext + " does not exists"
+    print(tempstring)
+    await ctx.send(tempstring)
+
+@bot.command()
+async def listcounter(ctx):
+    cur = dbconn.cursor()
+    cur.execute("SELECT * FROM wordcount")
+    rows = cur.fetchall()
+    text = ""
+    for row in rows:
+        text = text + str(row[1]) + ": " + str(row[2]) + "\n"
+        print("text: " + text)
+    print(text)
+    await ctx.send(text)
 
 @bot.command()
 @commands.is_owner()
